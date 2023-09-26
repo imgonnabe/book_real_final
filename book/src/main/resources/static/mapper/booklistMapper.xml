@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.book.web.booklist.BooklistDAO">
+
+ <!-- BS -->
+	<select id="booklist" parameterType="Map" resultType="Map">
+		SELECT bkno, bkname, bkwrite, bkimg, bkprice, bkcate,
+		(
+		SELECT COUNT(*)
+		FROM books
+		<where>
+			<if test="bkcate gt 0">AND bkcate = #{bkcate}</if>
+			<choose>
+				<when test="searchN == 'all'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%') OR
+					bkwrite LIKE
+					CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'name'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'write'">
+					AND bkwrite LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+			</choose>
+		</where>
+		) AS count
+		FROM books
+		<where>
+			<if test="bkcate gt 0">AND bkcate = #{bkcate}</if>
+			<choose>
+				<when test="searchN == 'all'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%') OR
+					bkwrite LIKE
+					CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'name'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'write'">
+					AND bkwrite LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+			</choose>
+		</where>
+		ORDER BY bkno asc
+		<if test="startRow >= 0">
+		LIMIT #{startRow}, #{pageSize}
+		</if>
+
+	</select>
+
+	<select id="bookCount" parameterType="Map" resultType="Integer">
+		SELECT COUNT(*) FROM books
+		<where>
+			<if test="bkcate gt 0">AND bkcate = #{bkcate}</if>
+			<choose>
+				<when test="searchN == 'all'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%') OR
+					bkwrite LIKE
+					CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'name'">
+					AND bkname LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+				<when test="searchN == 'write'">
+					AND bkwrite LIKE CONCAT('%', #{searchV}, '%')
+				</when>
+			</choose>
+		</where>
+	</select>
+
+
+	<select id="bookdetail" parameterType="Integer" resultType="Map">
+		SELECT *
+		FROM books WHERE bkno=#{bkno }
+	</select>
+
+	<select id="booktop" resultType="com.book.web.booklist.BooklistDTO">
+		SELECT *
+		FROM books
+		ORDER BY bcnt
+		DESC
+		LIMIT 1, 10
+	</select>
+	
+	<select id="bookrtop" resultType="com.book.web.booklist.BooklistDTO">
+		SELECT *
+		FROM books
+		ORDER BY rcnt
+		DESC
+		LIMIT 1, 10
+	</select>
+
+
+	<insert id="bookWrite" parameterType="Map">
+		INSERT INTO books (bkname, bkwrite, bkscontent, bkcontent,
+		bkprice, bstock, bkcate, bkpublisher
+		<if test="upFile != null and upFile != ''">, bkimg</if>
+		)
+		VALUES (#{name}, #{write}, #{scontent}, #{content}, #{price},
+		#{bstock}, #{cate}, #{bkpublisher}
+		<if test="upFile != null and upFile != ''">, #{upFile}</if>
+		)
+	</insert>
+	
+	<insert id="bookWrite2" parameterType="Map">
+		INSERT INTO rental ( mid, bkno, rdel
+		)
+		VALUES (#{mid}, #{bkno}, #{rdel}
+		)
+	</insert>
+	
+	
+	<select id="reviewsList" parameterType="Map" resultType="Map">
+    	SELECT r.reno, r.mid,m.mname, m.mgrade ,r.bkno, r.recomment, r.rescore , 
+           if(date_format(current_timestamp(),'%Y-%m-%d') = date_format(r.redate,'%Y-%m-%d'),date_format(r.redate,'%H:%i'),date_format(r.redate,'%m-%d')) AS redate,
+	       (
+		    SELECT COUNT(*)
+		    FROM reviews WHERE bkno = #{bkno} AND redel = 1 ) AS count
+	         FROM reviews r
+			 LEFT JOIN members m ON r.mid = m.mid
+	        WHERE r.bkno = #{bkno}  
+	        AND redel = 1
+    </select>
+    
+    
+	<select id="booktrade" parameterType="Integer">
+          SELECT mid, bkno 
+			 FROM 
+			 (SELECT mid , bkno, ROW_NUMBER() OVER (PARTITION BY mid ) AS rn
+			 FROM trade
+			 WHERE bkno = #{bkno}) AS subquery
+          WHERE rn = 1
+	</select>
+	
+	<select id="bookrental" parameterType="Integer">
+			 SELECT mid, bkno 
+			 FROM 
+			 (SELECT mid , bkno, ROW_NUMBER() OVER (PARTITION BY mid) AS rn
+			 FROM rental
+			 WHERE bkno = #{bkno}) AS subquery
+          WHERE rn = 1
+	</select>
+	
+     <insert id="addReview" parameterType="Map">
+		INSERT INTO reviews (mid, bkno, recomment, rescore)
+		VALUES (#{mid}, #{bkno}, #{recomment}, #{rescore})
+	</insert>
+	
+	<update id="rdel" parameterType="Map">
+	    UPDATE reviews 
+	    SET redel=0
+	    WHERE bkno=#{bkno} AND reno=#{reno}
+
+
+    </update>
+	
+	
+	
+	
+ <!-- SM -->	
+	 <insert id="detail2" parameterType="com.book.web.booklist.CartDTO" >
+    INSERT INTO cart(bkno,bkimg, bkscontent, price, total, amount, mid) VALUES(#{bkno},#{bkimg}, (SELECT bkscontent FROM books WHERE bkno=#{bkno}), #{price}, #{price}*#{amount}, #{amount}, #{mid})
+
+
+    </insert>
+
+<select id="cart" parameterType="com.book.web.booklist.CartDTO"  resultType="Map">
+SELECT *
+FROM cart
+WHERE amount > 0 AND mid=#{mid} 
+ORDER BY cartno desc
+
+
+
+</select>
+
+ <update id="delete" parameterType="Map">
+UPDATE cart SET amount = amount - #{mod}, total = (SELECT price FROM cart WHERE cartno=#{cartno}) * ((SELECT amount FROM cart WHERE cartno = #{cartno}) - #{mod}) WHERE cartno=#{cartno}
+
+</update>
+
+<delete id="delete2" parameterType="Map">
+ DELETE FROM cart WHERE cartno = #{cartno} AND amount = 0
+
+
+</delete>
+ 
+
+<update id="cart2" parameterType="com.book.web.booklist.CartDTO">
+UPDATE cart SET amount = amount + #{amount} , total = total + #{price} * #{amount} WHERE bkno = #{bkno} AND mid = #{mid}
+</update>
+ 
+ 
+ <select id="purchase" parameterType="String" resultType="Map">
+SELECT c.mid as mid, c.amount as amount, c.price as price, c.total as total, b.bkname as bkname,
+  ROW_NUMBER() OVER (ORDER BY c.bkno) AS rownum
+FROM cart c
+LEFT JOIN books b ON c.bkno = b.bkno
+WHERE c.mid = #{mid};
+ 
+
+ </select>
+ 
+ 
+ 
+ <update id="stockupdate" parameterType="Map">
+ UPDATE books set bstock = bstock - #{amount} WHERE bkno =#{bkno};
+ 
+ 
+ </update>
+ 
+ 
+ 
+ 
+ 
+ <insert id="insert" parameterType="Map">
+ 
+ INSERT INTO trade(ttotal ,mid, tamount, bkno, tdel) VALUES(#{total}, #{mid}, #{amount},#{bkno},#{tdel} )
+ 
+ </insert>
+ 
+ <delete id="delete3" parameterType="Map">
+ DELETE FROM cart WHERE mid =#{mid} 
+ </delete>
+ 
+ 
+<select id="coupon" parameterType="com.book.web.booklist.CartDTO"  resultType="Map">
+SELECT *
+FROM coupons
+WHERE mid=#{mid} AND cdel = 1
+</select>
+ 
+ 
+  <update id="update" parameterType="Map">
+ UPDATE cart 
+ set total =#{total}*0.9, price=#{price}*0.9
+ WHERE cartno=#{cartno}
+ </update>
+ 
+
+ 
+ 
+<update id="updateCoupon" parameterType="String" >
+UPDATE coupons
+SET cdel = 0
+WHERE mid =#{mid}
+</update>
+
+	
+<!-- SH -->
+
+
+<select id="rentaldata" resultType="Map" parameterType="Integer" >
+	SELECT *
+	FROM rental
+	WHERE bkno = #{bkno} and rno = (select MAX(rno) FROM rental WHERE bkno = #{bkno}) 
+</select>
+	
+	<!-- 연체 -->
+<select id="overdue" resultType="Map" parameterType="Map" >
+      SELECT r.rno, r.bkno, b.bkwrite, b.bkimg, b.bkname, r.rsdate, r.rddate, r.rdel,
+      (select count(*) from rental where mid = #{mid}) as count
+      FROM rental r
+      LEFT JOIN books b ON r.bkno = b.bkno
+      WHERE r.mid = #{mid}  AND rdel = 1
+      order by r.rsdate desc   
+</select>
+
+
+</mapper>

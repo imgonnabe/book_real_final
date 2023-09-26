@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.book.web.user.UserDAO">
+
+	<select id="findId" parameterType="com.book.web.user.UserDTO" resultType="com.book.web.user.UserDTO">
+		SELECT count(*) as count, mid
+		FROM members
+		WHERE mname=#{mname} AND memail=#{memail}
+	</select>
+
+	<select id="findpw" parameterType="com.book.web.user.UserDTO" resultType="com.book.web.user.UserDTO">
+		SELECT count(*) as count
+		FROM members
+		WHERE mid=#{mid} AND memail=#{memail}
+	</select>
+
+	<update id="setPw" parameterType="com.book.web.join.JoinDTO" >
+		UPDATE members
+	    SET mpw=#{mid}
+	    WHERE mid=#{mid} AND memail=#{memail}
+	</update>
+	
+	<update id="editpw" parameterType="com.book.web.join.JoinDTO" >
+		UPDATE members
+	    SET mpw=#{mpw}
+	    WHERE mid=#{mid}
+	</update>
+
+	<select id="userinfo" parameterType="com.book.web.user.UserDTO" resultType="com.book.web.user.UserDTO">
+		SELECT *
+		FROM members
+		WHERE mid=#{mid}
+	</select>
+	
+</mapper>

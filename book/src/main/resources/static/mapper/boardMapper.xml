@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.book.web.board.BoardDAO">
+<select id="board1" resultType="Map">
+	SELECT b.bno,b.btitle,b.mid,b.bcate,b.bread,s.stitle,b.bdate
+	FROM boardview b
+	JOIN setupboard s
+	ON b.bcate = s.bcate
+	ORDER BY b.bno DESC
+	LIMIT 0,10 
+
+</select>
+
+<select id="board2"  resultType="Map">
+	SELECT *
+	FROM board	
+	WHERE bdate 
+	BETWEEN DATE_FORMAT(DATE_ADD(NOW(), INTERVAL -7 DAY),'%Y-%m-%d 00:00:00')
+    AND DATE_FORMAT(NOW(), '%Y-%m-%d 23:29:55')
+    AND bdel = 1
+	ORDER BY bread DESC
+	LIMIT 0,10 
+</select>
+
+<select id="board3" resultType="Map">
+	SELECT *
+	FROM notice
+	WHERE ncate=1 AND ndel=1
+	ORDER BY nno DESC
+	LIMIT 0,10 
+</select>
+
+<select id="board4" resultType="Map">
+	SELECT *
+	FROM notice
+	WHERE ncate=2 AND ndel=1
+	ORDER BY nno DESC
+	LIMIT 0,10 
+</select>
+
+<select id="boardList" resultType="Map">
+	SELECT *
+	FROM setupboard 
+	WHERE sdel=1
+	ORDER BY sno ASC
+</select>
+
+<select id="totalc" parameterType="Integer" resultType="Integer">
+	SELECT COUNT(btitle)
+	FROM boardview
+</select>
+
+<select id="totalc2" parameterType="Map" resultType="Integer">
+	SELECT COUNT(btitle)
+	FROM boardview
+	<where>
+			<choose>
+				<when test="searchN == 'title'"> AND btitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND bcontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+</select>
+
+<select id="listc" parameterType="Map" resultType="Map">
+	SELECT b.bno,b.btitle,b.mid,b.bcate,b.bread,s.stitle,b.bdate,b.commentcount
+	FROM boardview b
+	JOIN setupboard s
+	ON b.bcate = s.bcate
+	ORDER BY b.bno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+<select id="searchlistc" parameterType="Map" resultType="Map">
+	SELECT b.bno,b.btitle,b.mid,b.bcate,b.bread,s.stitle,b.bdate,b.commentcount
+	
+	FROM boardview b
+	JOIN setupboard s
+	ON b.bcate = s.bcate
+	<where>
+			<choose>
+				<when test="searchN == 'title'"> AND b.btitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND b.bcontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND b.mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+	
+	ORDER BY b.bno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+<insert id="cwrite" parameterType="Map">
+ 	INSERT INTO board(btitle, bcontent, bcate, mno)
+ 	VALUES(#{title},#{content},#{board}, (SELECT mno FROM members WHERE mid=#{mid}))
+ 
+ </insert>
+
+<select id="list" parameterType="Map" resultType="Map">
+	SELECT *, (SELECT COUNT(*) FROM boardview WHERE bcate=#{board})AS COUNT
+	FROM (SELECT CAST(@ROWNUM:=@ROWNUM+1 AS UNSIGNED)AS rowNum, b.*
+		FROM boardview b, (SELECT @ROWNUM:=0) AS R
+		WHERE b.bcate = #{board}
+		ORDER BY b.bno ASC
+		) mm
+	ORDER BY mm.bno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+ <insert id="bwrite" parameterType="Map">
+ 	INSERT INTO board(btitle, bcontent, bcate, mno)
+ 	VALUES(#{title},#{content},#{board}, (SELECT mno FROM members WHERE mid=#{mid}))
+ 
+ </insert>
+ 
+ <select id="bdetail" parameterType="Map" resultType="Map">
+ 	SELECT b.btitle,b.bcontent,b.bdate,b.bcate,b.bread,b.mname,b.bno,b.mno,b.mid,b.commentcount,s.stitle
+ 	FROM boardview b
+ 	JOIN setupboard s
+ 	ON b.bcate=s.bcate
+ 	WHERE bno=#{bno}
+ 
+ </select>
+ 
+ <insert id="commentInsert" parameterType="Map">
+ 	INSERT INTO comments(bno,mno,comment,mid)
+ 	VALUES(#{bno},(SELECT mno FROM members WHERE mid=#{mid}),#{comment},#{mid})
+ </insert>
+ 
+<select id="commentsList" parameterType="Map" resultType="Map">
+	SELECT cno,c.mno,bno,comment,cdate,mname,c.mid
+	FROM comments c
+	JOIN members m
+	ON m.mno=c.mno
+	WHERE bno=#{bno} AND cdel=1
+
+</select>
+
+<update id="deleteb" parameterType="Map">
+	UPDATE board 
+	SET bdel=0 
+	WHERE bno=#{bno} 
+
+</update>
+
+<update id="edit" parameterType="Map">
+	UPDATE board 
+	SET btitle=#{title},bcontent=#{content}
+	WHERE bno=#{bno}
+</update>
+
+<update id="viewUp" parameterType="Map">
+	UPDATE board
+	SET bread=bread+1
+	WHERE bno=#{bno}
+</update>
+
+<update id="cdel" parameterType="Map">
+	UPDATE comments 
+	SET cdel=0
+	WHERE bno=#{bno} AND cno=#{cno}
+
+
+</update>
+
+<update id="cedit" parameterType="Map">
+	UPDATE comments 
+	SET comment=#{recomment}
+	WHERE bno=#{bno} AND cno=#{cno}
+	
+
+</update>
+<select id="searchlist" parameterType="Map" resultType="Map">
+	SELECT bno,btitle,bcontent,bdate,bread,bcate,mid
+	
+	FROM boardview
+	<where>
+	<if test="board gt 0">bcate=#{board}</if>
+			<choose>
+				<when test="searchN == 'title'"> AND btitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND bcontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+	
+	ORDER BY bno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+<select id="name" parameterType="Integer" resultType="String">
+	SELECT stitle
+	FROM setupboard
+	WHERE bcate=#{board} 
+</select>
+
+<select id="total" parameterType="Integer" resultType="Integer">
+	SELECT COUNT(*)
+	FROM boardview
+	WHERE bcate=#{board}
+
+</select>
+<select id="total2" parameterType="Map" resultType="Integer">
+	SELECT COUNT(btitle)
+	FROM boardview
+	<where>
+	<if test="board gt 0">bcate=#{board}</if>
+			<choose>
+				<when test="searchN == 'title'"> AND btitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND bcontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+</select>
+
+<select id="comments" parameterType="Map" resultType="String">
+	SELECT mid
+	FROM comments
+	WHERE cno=#{cno}
+
+</select>
+
+<!--여기부터 notice 관련 mapper  -->
+<select id="ntotal" parameterType="Integer" resultType="Integer">
+	SELECT COUNT(*)
+	FROM noticeview
+	WHERE ncate=#{board}
+</select>
+
+<select id="nboardList" resultType="Map">
+	SELECT *
+	FROM nsetupboard 
+	WHERE nsdel=1
+	ORDER BY nsno ASC
+</select>
+
+
+
+<select id="nlist" parameterType="Map" resultType="Map">
+	SELECT *, (SELECT COUNT(*) FROM noticeview WHERE ncate=#{board})AS COUNT
+	FROM (SELECT CAST(@ROWNUM:=@ROWNUM+1 AS UNSIGNED)AS rowNum, b.*
+		FROM noticeview b, (SELECT @ROWNUM:=0) AS R
+		WHERE b.ncate = #{board}
+		ORDER BY b.nno ASC
+		) mm
+	
+	ORDER BY mm.nno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+<select id="ntotal2" parameterType="Map" resultType="Integer">
+	SELECT COUNT(ntitle)
+	FROM noticeview
+	<where>
+	<if test="board gt 0">ncate=#{board}</if>
+			<choose>
+				<when test="searchN == 'title'"> AND ntitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND ncontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+</select>
+
+<select id="nsearchlist" parameterType="Map" resultType="Map">
+	SELECT nno,ntitle,ncontent,ndate,nread,ncate,mid
+	
+	FROM noticeview
+	<where>
+	<if test="board gt 0">ncate=#{board}</if>
+			<choose>
+				<when test="searchN == 'title'"> AND ntitle Like CONCAT('%',#{searchV},'%') 
+				</when>
+				<when test="searchN =='content'"> AND ncontent Like CONCAT('%',#{searchV},'%')
+				</when>
+				<when test="searchN == 'mid'"> AND mid Like CONCAT('%',#{searchV},'%')
+				</when>
+			</choose>
+			
+	</where>
+	
+	ORDER BY nno DESC
+	LIMIT #{pageNo}, #{contentNo}
+</select>
+
+<update id="nviewUp" parameterType="Map">
+	UPDATE notice
+	SET nread=nread+1
+	WHERE nno=#{nno}
+</update>
+
+ <select id="ndetail" parameterType="Map" resultType="Map">
+ 	SELECT n.nreply,n.nno,n.ntitle,n.ncontent,n.ndate,n.ndate,n.nread,n.ndel,n.ncate,n.mno,n.mid,n.mgrade,s.nstitle
+ 	FROM noticeview n
+ 	JOIN nsetupboard s
+ 	ON n.ncate = s.ncate
+ 	WHERE nno=#{nno} 
+ 
+ </select>
+ 
+ <select id="nidetail" parameterType="Map" resultType="String">
+ 	SELECT m.mid 
+ 	FROM notice n
+ 	JOIN members m
+ 	ON n.mno = m.mno
+ 	WHERE nno = #{nno}
+ </select>
+ 
+ <update id="nedit" parameterType="Map">
+	UPDATE notice
+	SET ntitle=#{title},ncontent=#{content}
+	WHERE nno=#{nno}
+</update>
+ 
+ <update id="ndelete" parameterType="Map">
+	UPDATE notice
+	SET ndel=0 
+	WHERE nno=#{nno} 
+
+</update>
+
+<select id="qna" resultType="Map">
+	SELECT ntitle, ncontent 
+	FROM noticeview
+	WHERE ncate =2 
+	ORDER BY nread DESC
+	LIMIT 0,10
+</select>
+
+<insert id="nwrite" parameterType="Map">
+ 	INSERT INTO notice(ntitle, ncontent, ncate, mno)
+ 	VALUES(#{title},#{content},#{board}, (SELECT mno FROM members WHERE mid=#{mid}))
+ 
+ </insert>
+ 
+ <select id="inquire" parameterType="String" resultType="Map">
+ 	SELECT nno,mid,ntitle,ncontent,mno,ndate,nread,nreply
+ 	FROM noticeview
+ 	WHERE mno = (SELECT mno FROM members WHERE mid=#{sid})
+ 	AND ncate =3 
+ 	ORDER BY nno DESC
+ </select>
+ 
+ 
+</mapper>
